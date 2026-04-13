@@ -12,6 +12,7 @@ import TasksSection from './sections/TasksSection';
 import CardsSection from './sections/CardsSection';
 import HobbiesSection from './sections/HobbiesSection';
 import { PointsProvider, usePoints } from '@/lib/PointsContext';
+import { useSyncStatus, SyncState } from '@/lib/useSyncStatus';
 
 const TABS = [
   { id: 'habits', label: 'Habits', icon: CheckSquare },
@@ -26,6 +27,45 @@ const TABS = [
 ] as const;
 
 type TabId = typeof TABS[number]['id'];
+
+function SyncIndicator({ state }: { state: SyncState }) {
+  const isConfigured =
+    typeof process !== 'undefined' &&
+    !!process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  if (!isConfigured) return null;
+
+  return (
+    <div className="flex items-center gap-1.5 text-xs" title={
+      state === 'syncing' ? 'Syncing to cloud…'
+      : state === 'synced' ? 'Synced'
+      : state === 'error' ? 'Sync error'
+      : 'Cloud sync active'
+    }>
+      {state === 'syncing' && (
+        <>
+          <span className="inline-block w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+          <span className="hidden sm:inline text-blue-500 dark:text-blue-400">Syncing</span>
+        </>
+      )}
+      {state === 'synced' && (
+        <>
+          <span className="inline-block w-2 h-2 rounded-full bg-green-400" />
+          <span className="hidden sm:inline text-green-600 dark:text-green-400">Synced</span>
+        </>
+      )}
+      {state === 'error' && (
+        <>
+          <span className="inline-block w-2 h-2 rounded-full bg-red-500" />
+          <span className="hidden sm:inline text-red-500">Sync error</span>
+        </>
+      )}
+      {state === 'idle' && (
+        <span className="inline-block w-2 h-2 rounded-full bg-green-400 opacity-60" />
+      )}
+    </div>
+  );
+}
 
 function HeaderPoints() {
   const { spendable, totalEarned, levelInfo } = usePoints();
@@ -68,15 +108,19 @@ function HeaderPoints() {
 
 function DashboardInner() {
   const [activeTab, setActiveTab] = useState<TabId>('habits');
+  const syncStatus = useSyncStatus();
 
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <h1 className="text-xl font-bold text-indigo-600 dark:text-indigo-400 tracking-tight flex-shrink-0">
-            Personal Dashboard
-          </h1>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <h1 className="text-xl font-bold text-indigo-600 dark:text-indigo-400 tracking-tight">
+              Personal Dashboard
+            </h1>
+            <SyncIndicator state={syncStatus.state} />
+          </div>
           <nav className="flex gap-1 flex-1 justify-center overflow-x-auto">
             {TABS.map(({ id, label, icon: Icon }) => (
               <button

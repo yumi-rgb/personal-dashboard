@@ -27,6 +27,10 @@ function set<T>(key: string, value: T): void {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+// ---------------------------------------------------------------------------
+// Sync localStorage storage (backward compatible)
+// ---------------------------------------------------------------------------
+
 // Habits
 export const habitsStorage = {
   get: (): Habit[] => get<Habit[]>(KEYS.habits, []),
@@ -118,3 +122,24 @@ export function getSpendablePoints(): number {
     .reduce((s, r) => s + r.pointCost, 0);
   return earned - redeemed;
 }
+
+// ---------------------------------------------------------------------------
+// Async Supabase storage (re-exported from supabaseStorage for convenience)
+// ---------------------------------------------------------------------------
+
+export {
+  supabaseHabitsStorage,
+  supabaseHealthStorage,
+  supabaseGoalsStorage,
+  supabasePointsLogStorage,
+  supabaseRewardsStorage,
+  supabaseHomeStorage,
+  supabaseHobbiesStorage,
+  supabasePersonalTasksStorage,
+  supabaseCardBenefitsStorage,
+  supabaseTaxFilingStorage,
+  supabaseEEBondsStorage,
+  supabaseSavingsGoalsStorage,
+  supabaseNetworthTrendStorage,
+  supabaseCleaningChecklistStorage,
+} from './supabaseStorage';
