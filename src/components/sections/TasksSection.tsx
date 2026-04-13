@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Plus, CheckCircle2, AlertCircle, Clock, Calendar, Briefcase, Trash2, User } from 'lucide-react';
+import { RefreshCw, Plus, CheckCircle2, AlertCircle, Clock, Calendar, Briefcase, Trash2, User, Edit2 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea, Select } from '@/components/ui/Input';
@@ -223,6 +223,15 @@ function PersonalTasksPanel() {
   const [tasks, setTasks] = useState<PersonalTask[]>([]);
   const [filterTab, setFilterTab] = useState<FilterTab>('open');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<PersonalTask | null>(null);
+  const [editForm, setEditForm] = useState<AddPersonalTaskForm>({
+    title: '',
+    dueDate: '',
+    notes: '',
+    recurrence: 'none',
+    recurrenceDayOfWeek: 1,
+    recurrenceInterval: 1,
+  });
   const [addForm, setAddForm] = useState<AddPersonalTaskForm>({
     title: '',
     dueDate: '',
@@ -312,6 +321,36 @@ function PersonalTasksPanel() {
     saveTasks(tasks.filter(t => t.id !== id));
   }
 
+  function openEditModal(task: PersonalTask) {
+    setEditingTask(task);
+    setEditForm({
+      title: task.title,
+      dueDate: task.dueDate ?? '',
+      notes: task.notes ?? '',
+      recurrence: task.recurrence,
+      recurrenceDayOfWeek: task.recurrenceDayOfWeek ?? 1,
+      recurrenceInterval: task.recurrenceInterval ?? 1,
+    });
+  }
+
+  function handleSaveEdit() {
+    if (!editingTask || !editForm.title.trim()) return;
+    const updated: PersonalTask = {
+      ...editingTask,
+      title: editForm.title.trim(),
+      dueDate: editForm.dueDate || undefined,
+      notes: editForm.notes.trim() || undefined,
+      recurrence: editForm.recurrence,
+      recurrenceDayOfWeek: editForm.recurrence === 'weekly' ? editForm.recurrenceDayOfWeek : undefined,
+      recurrenceInterval: editForm.recurrence === 'every_x_days' ? editForm.recurrenceInterval : undefined,
+    };
+    if (updated.recurrence !== 'none') {
+      updated.nextDueDate = calcNextDueDate(updated);
+    }
+    saveTasks(tasks.map(t => t.id === editingTask.id ? updated : t));
+    setEditingTask(null);
+  }
+
   const filteredTasks = tasks.filter(task => {
     if (filterTab === 'open') return !task.done;
     if (filterTab === 'done') return task.done;
@@ -378,6 +417,7 @@ function PersonalTasksPanel() {
                     isOverdue={isOverdue}
                     onMarkDone={handleMarkDone}
                     onDelete={handleDelete}
+                    onEdit={openEditModal}
                   />
                 ))}
               </div>
@@ -385,6 +425,70 @@ function PersonalTasksPanel() {
           );
         })
       )}
+
+      {/* Edit Personal Task Modal */}
+      <Modal isOpen={!!editingTask} onClose={() => setEditingTask(null)} title="Edit Personal Task">
+        <div className="space-y-3">
+          <Input
+            label="Title *"
+            value={editForm.title}
+            onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+            placeholder="Task title"
+          />
+          <Input
+            label="Due Date"
+            type="date"
+            value={editForm.dueDate}
+            onChange={e => setEditForm(f => ({ ...f, dueDate: e.target.value }))}
+          />
+          <Textarea
+            label="Notes"
+            value={editForm.notes}
+            onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+            placeholder="Optional notes"
+            rows={3}
+          />
+          <Select
+            label="Repeat"
+            value={editForm.recurrence}
+            onChange={e => setEditForm(f => ({ ...f, recurrence: e.target.value as RecurrenceType }))}
+          >
+            <option value="none">None</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="every_x_days">Every X days</option>
+          </Select>
+          {editForm.recurrence === 'weekly' && (
+            <Select
+              label="Day of week"
+              value={String(editForm.recurrenceDayOfWeek)}
+              onChange={e => setEditForm(f => ({ ...f, recurrenceDayOfWeek: Number(e.target.value) }))}
+            >
+              {DAY_NAMES.map((name, i) => (
+                <option key={i} value={i}>{name}</option>
+              ))}
+            </Select>
+          )}
+          {editForm.recurrence === 'every_x_days' && (
+            <Input
+              label="Every how many days?"
+              type="number"
+              min={1}
+              value={String(editForm.recurrenceInterval)}
+              onChange={e => setEditForm(f => ({ ...f, recurrenceInterval: Math.max(1, Number(e.target.value)) }))}
+            />
+          )}
+          <div className="flex gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setEditingTask(null)} className="flex-1">
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={!editForm.title.trim()} className="flex-1">
+              Save
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Add Personal Task Modal */}
       <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Personal Task">
@@ -461,14 +565,15 @@ interface PersonalTaskCardProps {
   isOverdue: boolean;
   onMarkDone: (task: PersonalTask) => void;
   onDelete: (id: string) => void;
+  onEdit: (task: PersonalTask) => void;
 }
 
-function PersonalTaskCard({ task, isOverdue, onMarkDone, onDelete }: PersonalTaskCardProps) {
+function PersonalTaskCard({ task, isOverdue, onMarkDone, onDelete, onEdit }: PersonalTaskCardProps) {
   const isRecurring = task.recurrence !== 'none';
   const displayDate = isRecurring ? task.nextDueDate : task.dueDate;
 
   return (
-    <div className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+    <div className={`w-full flex items-start gap-3 p-3 rounded-lg border transition-colors ${
       isOverdue && !task.done
         ? 'border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10'
         : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900'
@@ -520,17 +625,25 @@ function PersonalTaskCard({ task, isOverdue, onMarkDone, onDelete }: PersonalTas
             variant="ghost"
             size="sm"
             onClick={() => onMarkDone(task)}
-            className="text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+            className="text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 min-h-[36px] min-w-[36px]"
           >
             <CheckCircle2 size={16} />
-            Done
+            <span className="hidden sm:inline">Done</span>
           </Button>
         )}
         <Button
           variant="ghost"
           size="sm"
+          onClick={() => onEdit(task)}
+          className="text-gray-400 hover:text-indigo-500 min-h-[36px] min-w-[36px]"
+        >
+          <Edit2 size={14} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => onDelete(task.id)}
-          className="text-gray-400 hover:text-red-500"
+          className="text-gray-400 hover:text-red-500 min-h-[36px] min-w-[36px]"
         >
           <Trash2 size={14} />
         </Button>
@@ -557,6 +670,9 @@ function WorkTasksPanel() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [markingDone, setMarkingDone] = useState<Set<string | number>>(new Set());
+  const [editingWorkTask, setEditingWorkTask] = useState<Task | null>(null);
+  const [workEditForm, setWorkEditForm] = useState({ title: '', dueDate: '', notes: '' });
+  const [workEditSaving, setWorkEditSaving] = useState(false);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -639,6 +755,42 @@ function WorkTasksPanel() {
       setSubmitting(false);
     }
   };
+
+  function openWorkEditModal(task: Task) {
+    setEditingWorkTask(task);
+    setWorkEditForm({
+      title: task.title,
+      dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
+      notes: task.comments ?? '',
+    });
+  }
+
+  async function handleSaveWorkEdit() {
+    if (!editingWorkTask || !workEditForm.title.trim()) return;
+    setWorkEditSaving(true);
+    try {
+      const res = await fetch(`${CMS_BASE}/api/tasks/${editingWorkTask.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: workEditForm.title.trim(),
+          dueDate: workEditForm.dueDate || undefined,
+          notes: workEditForm.notes.trim() || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setTasks(prev => prev.map(t =>
+        t.id === editingWorkTask.id
+          ? { ...t, title: workEditForm.title.trim(), dueDate: workEditForm.dueDate || t.dueDate, comments: workEditForm.notes.trim() || t.comments }
+          : t
+      ));
+      setEditingWorkTask(null);
+    } catch (e) {
+      console.error('Failed to save work task:', e);
+    } finally {
+      setWorkEditSaving(false);
+    }
+  }
 
   const openCount = tasks.filter(t => OPEN_STATUSES.includes(t.status)).length;
 
@@ -723,12 +875,46 @@ function WorkTasksPanel() {
                   isOverdue={isOverdue}
                   isMarkingDone={markingDone.has(task.id)}
                   onMarkDone={handleMarkDone}
+                  onEdit={openWorkEditModal}
                 />
               ))}
             </div>
           </div>
         );
       })}
+
+      {/* Edit Work Task Modal */}
+      <Modal isOpen={!!editingWorkTask} onClose={() => setEditingWorkTask(null)} title="Edit Work Task">
+        <div className="space-y-3">
+          <Input
+            label="Title *"
+            value={workEditForm.title}
+            onChange={e => setWorkEditForm(f => ({ ...f, title: e.target.value }))}
+            placeholder="Task title"
+          />
+          <Input
+            label="Due Date"
+            type="date"
+            value={workEditForm.dueDate}
+            onChange={e => setWorkEditForm(f => ({ ...f, dueDate: e.target.value }))}
+          />
+          <Textarea
+            label="Notes"
+            value={workEditForm.notes}
+            onChange={e => setWorkEditForm(f => ({ ...f, notes: e.target.value }))}
+            placeholder="Optional notes"
+            rows={3}
+          />
+          <div className="flex gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setEditingWorkTask(null)} className="flex-1" disabled={workEditSaving}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveWorkEdit} disabled={workEditSaving || !workEditForm.title.trim()} className="flex-1">
+              {workEditSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Add Task Modal */}
       <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Work Task">
@@ -836,12 +1022,13 @@ interface TaskCardProps {
   isOverdue: boolean;
   isMarkingDone: boolean;
   onMarkDone: (task: Task) => void;
+  onEdit: (task: Task) => void;
 }
 
-function TaskCard({ task, isOverdue, isMarkingDone, onMarkDone }: TaskCardProps) {
+function TaskCard({ task, isOverdue, isMarkingDone, onMarkDone, onEdit }: TaskCardProps) {
   const isDone = task.status === 'Done';
   return (
-    <div className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+    <div className={`w-full flex items-start gap-3 p-3 rounded-lg border transition-colors ${
       isOverdue && !isDone
         ? 'border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10'
         : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900'
@@ -894,18 +1081,28 @@ function TaskCard({ task, isOverdue, isMarkingDone, onMarkDone }: TaskCardProps)
           </span>
         </div>
       </div>
-      {!isDone && (
+      <div className="flex items-center gap-1 flex-shrink-0">
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => onMarkDone(task)}
-          disabled={isMarkingDone}
-          className="flex-shrink-0 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+          onClick={() => onEdit(task)}
+          className="text-gray-400 hover:text-indigo-500 min-h-[36px] min-w-[36px]"
         >
-          <CheckCircle2 size={16} />
-          {isMarkingDone ? '...' : 'Done'}
+          <Edit2 size={14} />
         </Button>
-      )}
+        {!isDone && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onMarkDone(task)}
+            disabled={isMarkingDone}
+            className="text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 min-h-[36px] min-w-[36px]"
+          >
+            <CheckCircle2 size={16} />
+            {isMarkingDone ? '...' : <span className="hidden sm:inline">Done</span>}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

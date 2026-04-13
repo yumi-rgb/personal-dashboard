@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckSquare, Heart, DollarSign, Home, Target, Trophy, ListTodo, CreditCard, Sprout } from 'lucide-react';
+import { CheckSquare, Heart, DollarSign, Home, Target, Trophy, ListTodo, CreditCard, Sprout, LayoutDashboard } from 'lucide-react';
 import HabitsSection from './sections/HabitsSection';
 import HealthSection from './sections/HealthSection';
 import FinancesSection from './sections/FinancesSection';
@@ -11,10 +11,12 @@ import RewardsSection from './sections/RewardsSection';
 import TasksSection from './sections/TasksSection';
 import CardsSection from './sections/CardsSection';
 import HobbiesSection from './sections/HobbiesSection';
+import SummarySection from './sections/SummarySection';
 import { PointsProvider, usePoints } from '@/lib/PointsContext';
 import { useSyncStatus, SyncState } from '@/lib/useSyncStatus';
 
 const TABS = [
+  { id: 'summary', label: 'Summary', icon: LayoutDashboard },
   { id: 'habits', label: 'Habits', icon: CheckSquare },
   { id: 'health', label: 'Health', icon: Heart },
   { id: 'tasks', label: 'Tasks', icon: ListTodo },
@@ -107,7 +109,7 @@ function HeaderPoints() {
 }
 
 function DashboardInner() {
-  const [activeTab, setActiveTab] = useState<TabId>('habits');
+  const [activeTab, setActiveTab] = useState<TabId>('summary');
   const syncStatus = useSyncStatus();
 
   return (
@@ -147,6 +149,7 @@ function DashboardInner() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
+        {activeTab === 'summary' && <SummarySection onSwitchTab={(tab) => setActiveTab(tab as TabId)} />}
         {activeTab === 'habits' && <HabitsSection />}
         {activeTab === 'health' && <HealthSection />}
         {activeTab === 'tasks' && <TasksSection />}

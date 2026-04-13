@@ -227,7 +227,7 @@ function PrintingSection({ projects, onChange }: { projects: PrintProject[]; onC
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-2 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
         {(Object.keys(counts) as PrintStatus[]).map(status => (
           <div key={status} className={`rounded-lg px-3 py-2 text-center ${STATUS_COLORS[status]}`}>
             <div className="text-lg font-bold">{counts[status]}</div>
@@ -251,7 +251,7 @@ function PrintingSection({ projects, onChange }: { projects: PrintProject[]; onC
             value={form.description}
             onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
           />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               placeholder="Filament (e.g. PLA Black)"
@@ -390,7 +390,7 @@ function GardenSection({ plants, onChange }: { plants: GardenPlant[]; onChange: 
       {/* Add form */}
       {showAdd && (
         <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 mb-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               placeholder="Plant name *"
@@ -404,7 +404,7 @@ function GardenSection({ plants, onChange }: { plants: GardenPlant[]; onChange: 
               onChange={e => setForm(f => ({ ...f, variety: e.target.value }))}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               placeholder="Location (e.g. front bed)"
@@ -549,7 +549,7 @@ function HouseplantsSection({ plants, onChange }: { plants: Houseplant[]; onChan
       {/* Add form */}
       {showAdd && (
         <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 mb-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               placeholder="Plant name *"
@@ -563,7 +563,7 @@ function HouseplantsSection({ plants, onChange }: { plants: Houseplant[]; onChan
               onChange={e => setForm(f => ({ ...f, species: e.target.value }))}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               placeholder="Location (e.g. living room)"
@@ -830,7 +830,7 @@ function ReadingSection({ books, onChange }: { books: Book[]; onChange: (b: Book
       {/* Add form */}
       {showAdd && (
         <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 mb-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               placeholder="Title *"
@@ -844,7 +844,7 @@ function ReadingSection({ books, onChange }: { books: Book[]; onChange: (b: Book
               onChange={e => setForm(f => ({ ...f, author: e.target.value }))}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <select
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               value={form.status}
@@ -1153,7 +1153,7 @@ function WardrobeSection({ items, onChange }: { items: WardrobeItem[]; onChange:
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
         {(['have', 'need', 'for_sale'] as WardrobeStatus[]).map(s => (
           <button
             key={s}
@@ -1188,7 +1188,7 @@ function WardrobeSection({ items, onChange }: { items: WardrobeItem[]; onChange:
       {/* Add form */}
       {showAdd && (
         <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 mb-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               placeholder="Item name *"
@@ -1202,7 +1202,7 @@ function WardrobeSection({ items, onChange }: { items: WardrobeItem[]; onChange:
               onChange={e => setForm(f => ({ ...f, brand: e.target.value }))}
             />
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <select
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               value={form.category}
@@ -1226,7 +1226,7 @@ function WardrobeSection({ items, onChange }: { items: WardrobeItem[]; onChange:
               <option value="for_sale">For sale</option>
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
               type="number"
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"

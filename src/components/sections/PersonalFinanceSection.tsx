@@ -74,7 +74,7 @@ function NetWorthTrendCard() {
 
       {showAdd && (
         <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 mb-3 space-y-2.5">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-gray-500 mb-1">Date</label>
               <input
@@ -299,7 +299,7 @@ function SavingsGoalsCard() {
 
       {showAdd && (
         <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 mt-3 space-y-2.5">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <input
               className="px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               placeholder="Goal name *"
@@ -313,7 +313,7 @@ function SavingsGoalsCard() {
               onChange={e => setForm(f => ({ ...f, emoji: e.target.value }))}
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <input
               type="number"
               className="px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
@@ -502,7 +502,7 @@ function EEBondCard() {
 
       {showAdd && (
         <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 mt-3 space-y-2.5">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-gray-500 mb-1">Face Value ($) *</label>
               <input
@@ -523,7 +523,7 @@ function EEBondCard() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <input
               className="px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               placeholder="Serial number (optional)"
@@ -953,7 +953,7 @@ export default function PersonalFinanceSection() {
 
       {/* ── Net Worth Hero ─────────────────────────────────────────────────── */}
       <Card title="Household Net Worth">
-        <div className="grid grid-cols-3 gap-4 mb-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
           <div className="text-center">
             <div className="text-xs text-gray-500 mb-1">Total Assets</div>
             <div className="text-xl font-bold text-green-600 dark:text-green-400">{formatCurrency(totalAssets)}</div>
