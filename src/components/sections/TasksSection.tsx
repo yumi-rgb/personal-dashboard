@@ -115,9 +115,6 @@ function recurrenceLabel(task: PersonalTask): string {
 // ── Pre-seed data ─────────────────────────────────────────────────────────────
 
 function buildSeedTasks(): PersonalTask[] {
-  const todayStr = today();
-  const d = new Date(todayStr + 'T00:00:00');
-
   function makeRecurring(
     title: string,
     recurrence: RecurrenceType,
@@ -136,6 +133,7 @@ function buildSeedTasks(): PersonalTask[] {
   }
 
   return [
+    makeRecurring('💉 Take Tirzepatide', 'weekly', { recurrenceDayOfWeek: 0, notes: 'Weekly injection — rotate sites' }),
     makeRecurring('🧺 Laundry — Load 1 (Mon)', 'weekly', { recurrenceDayOfWeek: 1 }),
     makeRecurring('🧺 Laundry — Load 2 (Tue)', 'weekly', { recurrenceDayOfWeek: 2 }),
     makeRecurring('🧺 Laundry — Load 3 (Wed)', 'weekly', { recurrenceDayOfWeek: 3 }),
@@ -245,9 +243,10 @@ function PersonalTasksPanel() {
     recurrenceInterval: 1,
   });
 
-  // Load from localStorage, seeding recurring tasks if empty
+  // Load from localStorage, merging any new seed tasks by title
   useEffect(() => {
     try {
+      const seeds = buildSeedTasks();
       const stored = localStorage.getItem(PERSONAL_TASKS_KEY);
       if (stored) {
         const parsed: PersonalTask[] = JSON.parse(stored);
@@ -255,20 +254,20 @@ function PersonalTasksPanel() {
         const migrated = parsed.map(t =>
           t.recurrence === undefined ? { ...t, recurrence: 'none' as RecurrenceType } : t
         );
-        // Append seed recurring tasks if none exist yet
-        const hasRecurring = migrated.some(t => t.recurrence !== 'none');
-        if (!hasRecurring) {
-          const seeded = [...buildSeedTasks(), ...migrated];
-          setTasks(seeded);
-          localStorage.setItem(PERSONAL_TASKS_KEY, JSON.stringify(seeded));
+        // Merge: prepend any seed tasks whose title isn't already present
+        const existingTitles = new Set(migrated.map(t => t.title));
+        const missing = seeds.filter(s => !existingTitles.has(s.title));
+        if (missing.length > 0) {
+          const merged = [...missing, ...migrated];
+          setTasks(merged);
+          localStorage.setItem(PERSONAL_TASKS_KEY, JSON.stringify(merged));
         } else {
           setTasks(migrated);
         }
       } else {
         // Brand-new — seed everything
-        const seeded = buildSeedTasks();
-        setTasks(seeded);
-        localStorage.setItem(PERSONAL_TASKS_KEY, JSON.stringify(seeded));
+        setTasks(seeds);
+        localStorage.setItem(PERSONAL_TASKS_KEY, JSON.stringify(seeds));
       }
     } catch {}
   }, []);

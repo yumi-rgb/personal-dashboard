@@ -69,6 +69,29 @@ interface VermicompostData {
 type WardrobeStatus = 'have' | 'need' | 'for_sale';
 type ClothingCategory = 'tops' | 'bottoms' | 'dresses' | 'outerwear' | 'shoes' | 'accessories' | 'workwear' | 'casual' | 'formal';
 
+// ── Skin Care types ───────────────────────────────────────────────────────────
+
+type SkinCareCategory = 'cleanser' | 'toner' | 'serum' | 'moisturizer' | 'spf' | 'treatment' | 'mask' | 'eye_cream' | 'exfoliant' | 'oil' | 'other';
+type SkinCareStatus = 'active' | 'finished' | 'want_to_try' | 'discontinued';
+type SkinCareTimeOfDay = 'am' | 'pm' | 'both';
+
+interface SkinCareProduct {
+  id: string;
+  name: string;
+  brand: string;
+  category: SkinCareCategory;
+  status: SkinCareStatus;
+  timeOfDay?: SkinCareTimeOfDay;
+  step?: number; // routine order
+  purchasedAt?: string; // ISO date
+  openedAt?: string;    // ISO date — for tracking shelf life
+  expiresAt?: string;   // ISO date
+  repurchase?: boolean; // would you buy again?
+  notes?: string;
+  price?: number;
+  size?: string; // e.g. '30ml', '1.7 oz'
+}
+
 interface WardrobeItem {
   id: string;
   name: string;
@@ -87,6 +110,7 @@ interface HobbiesData {
   books: Book[];
   vermicompost?: VermicompostData;
   wardrobe?: WardrobeItem[];
+  skincare?: SkinCareProduct[];
 }
 
 const STORAGE_KEY = 'hobbies-v1';
@@ -1300,6 +1324,244 @@ function WardrobeSection({ items, onChange }: { items: WardrobeItem[]; onChange:
   );
 }
 
+// ── Skin Care Section ─────────────────────────────────────────────────────────
+
+const SKINCARE_CATEGORY_LABELS: Record<SkinCareCategory, string> = {
+  cleanser: 'Cleanser',
+  toner: 'Toner / Essence',
+  serum: 'Serum',
+  moisturizer: 'Moisturizer',
+  spf: 'SPF',
+  treatment: 'Treatment',
+  mask: 'Mask',
+  eye_cream: 'Eye Cream',
+  exfoliant: 'Exfoliant',
+  oil: 'Face Oil',
+  other: 'Other',
+};
+
+const SKINCARE_STATUS_COLORS: Record<SkinCareStatus, string> = {
+  active: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+  finished: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+  want_to_try: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+  discontinued: 'bg-red-100 text-red-500 dark:bg-red-900/40 dark:text-red-400',
+};
+
+const SKINCARE_STATUS_LABELS: Record<SkinCareStatus, string> = {
+  active: 'Active',
+  finished: 'Finished',
+  want_to_try: 'Want to Try',
+  discontinued: 'Discontinued',
+};
+
+const TOD_LABELS: Record<SkinCareTimeOfDay, string> = { am: 'AM', pm: 'PM', both: 'AM+PM' };
+
+function SkinCareSection({ products, onChange }: { products: SkinCareProduct[]; onChange: (p: SkinCareProduct[]) => void }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<SkinCareStatus | 'all'>('active');
+  const [form, setForm] = useState<Partial<SkinCareProduct>>({
+    name: '', brand: '', category: 'serum', status: 'active',
+    timeOfDay: 'both', step: undefined, notes: '', price: undefined, size: '', repurchase: undefined,
+  });
+
+  function resetForm() {
+    setForm({ name: '', brand: '', category: 'serum', status: 'active', timeOfDay: 'both', step: undefined, notes: '', price: undefined, size: '', repurchase: undefined });
+  }
+
+  function saveProduct() {
+    if (!form.name?.trim()) return;
+    if (editingId) {
+      onChange(products.map(p => p.id === editingId ? { ...p, ...form, name: form.name!.trim(), brand: form.brand?.trim() ?? '' } : p));
+      setEditingId(null);
+    } else {
+      const product: SkinCareProduct = {
+        id: crypto.randomUUID(),
+        name: form.name.trim(),
+        brand: form.brand?.trim() ?? '',
+        category: form.category ?? 'other',
+        status: form.status ?? 'active',
+        timeOfDay: form.timeOfDay,
+        step: form.step,
+        notes: form.notes?.trim() || undefined,
+        price: form.price,
+        size: form.size?.trim() || undefined,
+        repurchase: form.repurchase,
+        openedAt: form.status === 'active' ? new Date().toISOString().split('T')[0] : undefined,
+      };
+      onChange([product, ...products]);
+    }
+    resetForm();
+    setShowAdd(false);
+  }
+
+  function startEdit(p: SkinCareProduct) {
+    setForm({ ...p });
+    setEditingId(p.id);
+    setShowAdd(true);
+  }
+
+  const filtered = filterStatus === 'all' ? products : products.filter(p => p.status === filterStatus);
+
+  // Group by category for active/both views
+  const grouped = filtered.reduce<Record<string, SkinCareProduct[]>>((acc, p) => {
+    const key = p.category;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(p);
+    return acc;
+  }, {});
+
+  // Sort within each group by step then name
+  Object.values(grouped).forEach(arr => arr.sort((a, b) => (a.step ?? 99) - (b.step ?? 99) || a.name.localeCompare(b.name)));
+
+  const categoryOrder: SkinCareCategory[] = ['cleanser', 'toner', 'exfoliant', 'serum', 'treatment', 'eye_cream', 'moisturizer', 'oil', 'spf', 'mask', 'other'];
+
+  const activeCount = products.filter(p => p.status === 'active').length;
+
+  return (
+    <Card title={`✨ Skin Care (${activeCount} active)`}>
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        {(['active', 'want_to_try', 'finished', 'all'] as const).map(s => (
+          <button
+            key={s}
+            onClick={() => setFilterStatus(s)}
+            className={`px-3 py-1 text-sm rounded-full transition-colors ${filterStatus === s ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+          >
+            {s === 'all' ? 'All' : SKINCARE_STATUS_LABELS[s]}
+          </button>
+        ))}
+        <div className="ml-auto">
+          <AddButton onClick={() => { resetForm(); setEditingId(null); setShowAdd(true); }} label="Add Product" />
+        </div>
+      </div>
+
+      {showAdd && (
+        <div className="mb-4 p-4 border border-indigo-200 dark:border-indigo-800 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              className="col-span-2 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+              placeholder="Product name *"
+              value={form.name ?? ''}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            />
+            <input
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+              placeholder="Brand"
+              value={form.brand ?? ''}
+              onChange={e => setForm(f => ({ ...f, brand: e.target.value }))}
+            />
+            <input
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+              placeholder="Size (e.g. 30ml)"
+              value={form.size ?? ''}
+              onChange={e => setForm(f => ({ ...f, size: e.target.value }))}
+            />
+            <select
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+              value={form.category ?? 'other'}
+              onChange={e => setForm(f => ({ ...f, category: e.target.value as SkinCareCategory }))}
+            >
+              {categoryOrder.map(c => <option key={c} value={c}>{SKINCARE_CATEGORY_LABELS[c]}</option>)}
+            </select>
+            <select
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+              value={form.status ?? 'active'}
+              onChange={e => setForm(f => ({ ...f, status: e.target.value as SkinCareStatus }))}
+            >
+              {(Object.keys(SKINCARE_STATUS_LABELS) as SkinCareStatus[]).map(s => <option key={s} value={s}>{SKINCARE_STATUS_LABELS[s]}</option>)}
+            </select>
+            <select
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+              value={form.timeOfDay ?? 'both'}
+              onChange={e => setForm(f => ({ ...f, timeOfDay: e.target.value as SkinCareTimeOfDay }))}
+            >
+              <option value="am">AM only</option>
+              <option value="pm">PM only</option>
+              <option value="both">AM + PM</option>
+            </select>
+            <input
+              type="number"
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+              placeholder="Routine step #"
+              value={form.step ?? ''}
+              onChange={e => setForm(f => ({ ...f, step: e.target.value ? Number(e.target.value) : undefined }))}
+            />
+            <input
+              type="number"
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+              placeholder="Price ($)"
+              value={form.price ?? ''}
+              onChange={e => setForm(f => ({ ...f, price: e.target.value ? Number(e.target.value) : undefined }))}
+            />
+            <div className="col-span-2 flex items-center gap-3">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Repurchase?</span>
+              {[true, false, undefined].map((v, i) => (
+                <button
+                  key={i}
+                  onClick={() => setForm(f => ({ ...f, repurchase: v }))}
+                  className={`px-3 py-1 text-sm rounded-lg border transition-colors ${form.repurchase === v ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'}`}
+                >
+                  {v === true ? '👍 Yes' : v === false ? '👎 No' : '🤷 TBD'}
+                </button>
+              ))}
+            </div>
+            <textarea
+              className="col-span-2 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 resize-none"
+              rows={2}
+              placeholder="Notes (skin concerns addressed, how to use, etc.)"
+              value={form.notes ?? ''}
+              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+            />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={saveProduct} className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">{editingId ? 'Save Changes' : 'Add Product'}</button>
+            <button onClick={() => { setShowAdd(false); setEditingId(null); resetForm(); }} className="px-4 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded-lg">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-8">No products yet — add your first one!</p>
+      ) : (
+        <div className="space-y-4">
+          {categoryOrder.filter(c => grouped[c]?.length).map(cat => (
+            <div key={cat}>
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">{SKINCARE_CATEGORY_LABELS[cat]}</h4>
+              <div className="space-y-2">
+                {grouped[cat].map(p => (
+                  <div key={p.id} className="flex items-start gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800/50">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm text-gray-900 dark:text-white">{p.name}</span>
+                        {p.brand && <span className="text-xs text-gray-500 dark:text-gray-400">{p.brand}</span>}
+                        {p.size && <span className="text-xs text-gray-400 dark:text-gray-500">{p.size}</span>}
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${SKINCARE_STATUS_COLORS[p.status]}`}>{SKINCARE_STATUS_LABELS[p.status]}</span>
+                        {p.timeOfDay && <span className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">{TOD_LABELS[p.timeOfDay]}</span>}
+                        {p.step != null && <span className="text-xs text-gray-400">Step {p.step}</span>}
+                        {p.repurchase === true && <span className="text-xs">👍</span>}
+                        {p.repurchase === false && <span className="text-xs">👎</span>}
+                      </div>
+                      {p.notes && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{p.notes}</p>}
+                      <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                        {p.price != null && <span>${p.price}</span>}
+                        {p.openedAt && <span>Opened {new Date(p.openedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>}
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={() => startEdit(p)} className="p-1 text-gray-400 hover:text-indigo-500 transition-colors"><Edit2 size={14} /></button>
+                      <button onClick={() => onChange(products.filter(x => x.id !== p.id))} className="p-1 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function HobbiesSection() {
@@ -1319,6 +1581,10 @@ export default function HobbiesSection() {
 
   return (
     <div className="space-y-6">
+      <SkinCareSection
+        products={data.skincare ?? []}
+        onChange={skincare => updateData({ ...data, skincare })}
+      />
       <PrintingSection
         projects={data.printProjects}
         onChange={projects => updateData({ ...data, printProjects: projects })}
