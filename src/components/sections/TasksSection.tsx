@@ -136,7 +136,11 @@ function buildSeedTasks(): PersonalTask[] {
   }
 
   return [
-    makeRecurring('🧺 Do laundry', 'weekly', { recurrenceDayOfWeek: 1 }),
+    makeRecurring('🧺 Laundry — Load 1 (Mon)', 'weekly', { recurrenceDayOfWeek: 1 }),
+    makeRecurring('🧺 Laundry — Load 2 (Tue)', 'weekly', { recurrenceDayOfWeek: 2 }),
+    makeRecurring('🧺 Laundry — Load 3 (Wed)', 'weekly', { recurrenceDayOfWeek: 3 }),
+    makeRecurring('🧺 Laundry — Load 4 (Thu)', 'weekly', { recurrenceDayOfWeek: 4 }),
+    makeRecurring('🧺 Laundry — Load 5 (Fri)', 'weekly', { recurrenceDayOfWeek: 5 }),
     makeRecurring('🚗 Clean out the car', 'weekly', { recurrenceDayOfWeek: 6 }),
     makeRecurring('☕ Return mugs/glasses to kitchen', 'every_x_days', { recurrenceInterval: 3 }),
     makeRecurring('💇 Hair dye reminder', 'every_x_days', { recurrenceInterval: 42 }),
