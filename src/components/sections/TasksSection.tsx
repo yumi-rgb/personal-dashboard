@@ -248,6 +248,18 @@ function PersonalTasksPanel() {
     try {
       const seeds = buildSeedTasks();
       const stored = localStorage.getItem(PERSONAL_TASKS_KEY);
+      const todayStr = today();
+
+      function applyAutoReset(tasks: PersonalTask[]): PersonalTask[] {
+        // Auto-reset recurring tasks whose nextDueDate has arrived
+        return tasks.map(t => {
+          if (t.recurrence !== 'none' && t.done && t.nextDueDate && t.nextDueDate <= todayStr) {
+            return { ...t, done: false };
+          }
+          return t;
+        });
+      }
+
       if (stored) {
         const parsed: PersonalTask[] = JSON.parse(stored);
         // Migrate old tasks that are missing the recurrence field
@@ -257,13 +269,10 @@ function PersonalTasksPanel() {
         // Merge: prepend any seed tasks whose title isn't already present
         const existingTitles = new Set(migrated.map(t => t.title));
         const missing = seeds.filter(s => !existingTitles.has(s.title));
-        if (missing.length > 0) {
-          const merged = [...missing, ...migrated];
-          setTasks(merged);
-          localStorage.setItem(PERSONAL_TASKS_KEY, JSON.stringify(merged));
-        } else {
-          setTasks(migrated);
-        }
+        const merged = missing.length > 0 ? [...missing, ...migrated] : migrated;
+        const reset = applyAutoReset(merged);
+        setTasks(reset);
+        localStorage.setItem(PERSONAL_TASKS_KEY, JSON.stringify(reset));
       } else {
         // Brand-new — seed everything
         setTasks(seeds);
@@ -300,10 +309,10 @@ function PersonalTasksPanel() {
 
   function handleMarkDone(task: PersonalTask) {
     if (task.recurrence !== 'none') {
-      // Recurring: reset with new due date instead of marking permanently done
+      // Recurring: mark done + store next due date; auto-resets when that date arrives
       const updatedTask: PersonalTask = {
         ...task,
-        done: false,
+        done: true,
         lastCompletedAt: today(),
         nextDueDate: calcNextDueDate(task),
       };
