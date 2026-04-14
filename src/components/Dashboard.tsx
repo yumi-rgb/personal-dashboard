@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckSquare, Heart, DollarSign, Home, Target, Trophy, ListTodo, CreditCard, Sprout, LayoutDashboard } from 'lucide-react';
+import { CheckSquare, Heart, DollarSign, Home, Target, Trophy, ListTodo, CreditCard, Sprout, LayoutDashboard, Plane } from 'lucide-react';
 import HabitsSection from './sections/HabitsSection';
 import HealthSection from './sections/HealthSection';
 import FinancesSection from './sections/FinancesSection';
@@ -12,6 +12,7 @@ import TasksSection from './sections/TasksSection';
 import CardsSection from './sections/CardsSection';
 import HobbiesSection from './sections/HobbiesSection';
 import SummarySection from './sections/SummarySection';
+import TravelSection from './sections/TravelSection';
 import { PointsProvider, usePoints } from '@/lib/PointsContext';
 import { useSyncStatus, SyncState } from '@/lib/useSyncStatus';
 
@@ -23,6 +24,7 @@ const TABS = [
   { id: 'finances', label: 'Finances', icon: DollarSign },
   { id: 'cards', label: 'Cards', icon: CreditCard },
   { id: 'hobbies', label: 'Hobbies', icon: Sprout },
+  { id: 'travel', label: 'Travel', icon: Plane },
   { id: 'home', label: 'Home', icon: Home },
   { id: 'goals', label: 'Goals', icon: Target },
   { id: 'rewards', label: 'Rewards', icon: Trophy },
@@ -156,6 +158,7 @@ function DashboardInner() {
         {activeTab === 'finances' && <FinancesSection />}
         {activeTab === 'cards' && <CardsSection />}
         {activeTab === 'hobbies' && <HobbiesSection />}
+        {activeTab === 'travel' && <TravelSection />}
         {activeTab === 'home' && <HomeSection />}
         {activeTab === 'goals' && <GoalsSection />}
         {activeTab === 'rewards' && <RewardsSection />}
