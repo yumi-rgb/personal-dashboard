@@ -134,6 +134,7 @@ function buildSeedTasks(): PersonalTask[] {
 
   return [
     makeRecurring('💉 Take Tirzepatide', 'weekly', { recurrenceDayOfWeek: 0, notes: 'Weekly injection — rotate sites' }),
+    makeRecurring('💆 Deep condition hair', 'weekly', { recurrenceDayOfWeek: 0, notes: 'Leave in 20–30 min under heat cap' }),
     makeRecurring('🧺 Laundry — Load 1 (Mon)', 'weekly', { recurrenceDayOfWeek: 1 }),
     makeRecurring('🧺 Laundry — Load 2 (Tue)', 'weekly', { recurrenceDayOfWeek: 2 }),
     makeRecurring('🧺 Laundry — Load 3 (Wed)', 'weekly', { recurrenceDayOfWeek: 3 }),
