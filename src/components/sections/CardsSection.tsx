@@ -1,11 +1,123 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CreditCard, AlertTriangle, Calendar, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { CreditCard, AlertTriangle, Calendar, ExternalLink, CheckCircle2, Plus, Trash2, Star, Clock } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 
 const CARD_BENEFITS_URL = 'http://localhost:3000';
 const STORAGE_KEY = 'card-benefits-v1';
+const WATCHLIST_KEY = 'cards-watchlist-v1';
+
+// ── Cards-to-Consider types ───────────────────────────────────────────────────
+
+type WatchlistStatus = 'watching' | 'apply_when_ready' | 'applied' | 'approved' | 'declined' | 'skipped';
+type WatchlistPriority = 'high' | 'medium' | 'low';
+
+interface WatchlistCard {
+  id: string;
+  name: string;
+  issuer: string;
+  network?: string;
+  annualFee: number;
+  welcomeBonus?: string;
+  spendRequirement?: string;
+  bonusExpires?: string;       // ISO date — when offer ends
+  estimatedValue?: number;     // dollar value of welcome bonus
+  minCreditScore?: number;
+  status: WatchlistStatus;
+  priority: WatchlistPriority;
+  notes?: string;
+  applyUrl?: string;
+  createdAt: string;
+}
+
+const WATCHLIST_STATUS_LABELS: Record<WatchlistStatus, string> = {
+  watching: 'Watching',
+  apply_when_ready: 'Apply When Ready',
+  applied: 'Applied',
+  approved: 'Approved ✅',
+  declined: 'Declined',
+  skipped: 'Skipped',
+};
+
+const WATCHLIST_STATUS_COLORS: Record<WatchlistStatus, string> = {
+  watching: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  apply_when_ready: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  applied: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+  approved: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+  declined: 'bg-red-100 text-red-500 dark:bg-red-900/40 dark:text-red-400',
+  skipped: 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500',
+};
+
+const PRIORITY_COLORS: Record<WatchlistPriority, string> = {
+  high: 'text-red-500',
+  medium: 'text-amber-500',
+  low: 'text-gray-400',
+};
+
+function buildSeedWatchlist(): WatchlistCard[] {
+  return [
+    {
+      id: 'wl-alaska-mileage-plan-visa',
+      name: 'Alaska Airlines Visa Signature® Card',
+      issuer: 'Bank of America',
+      network: 'Visa',
+      annualFee: 95,
+      welcomeBonus: '60,000 miles + Alaska\'s Famous Companion Fare',
+      spendRequirement: '$3,000 in first 90 days',
+      estimatedValue: 900,
+      minCreditScore: 700,
+      status: 'apply_when_ready',
+      priority: 'high',
+      notes: 'Alaska Mileage Plan uses distance-based award chart — great emergency backup (4,500 pts economy on short hops). Partners with American Airlines. Apply once credit score hits 700+. Husband may qualify now.',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 'wl-bilt-mastercard',
+      name: 'Bilt Mastercard®',
+      issuer: 'Wells Fargo',
+      network: 'Mastercard',
+      annualFee: 0,
+      welcomeBonus: 'No welcome bonus — but earns points on rent (no fee!)',
+      estimatedValue: 0,
+      minCreditScore: 700,
+      status: 'watching',
+      priority: 'medium',
+      notes: 'No annual fee. Earn points on rent payments with no transaction fee. Bilt transfers to Chase partners + Alaska + Hyatt + AA. Transfers to Hyatt at 1:1 are especially valuable. Apply once score hits 700.',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 'wl-amex-gold',
+      name: 'American Express® Gold Card',
+      issuer: 'American Express',
+      network: 'Amex',
+      annualFee: 325,
+      welcomeBonus: '60,000–90,000 Membership Rewards points',
+      spendRequirement: '$6,000 in first 6 months',
+      estimatedValue: 1200,
+      minCreditScore: 700,
+      status: 'watching',
+      priority: 'medium',
+      notes: '$240 dining credit + $120 Uber Cash annually offsets most of fee. 4x on dining and groceries. Membership Rewards transfer to Delta, Air France/KLM, British Airways, ANA. Good complement to Sapphire Reserve.',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 'wl-capital-one-venture-x',
+      name: 'Capital One Venture X Rewards Credit Card',
+      issuer: 'Capital One',
+      network: 'Visa',
+      annualFee: 395,
+      welcomeBonus: '75,000 miles',
+      spendRequirement: '$4,000 in first 3 months',
+      estimatedValue: 1125,
+      minCreditScore: 720,
+      status: 'watching',
+      priority: 'low',
+      notes: '$300 travel credit + 10,000 anniversary miles (~$100) effectively make annual fee $0. Includes Priority Pass lounge access (already have via Sapphire Reserve). Only consider if Sapphire Reserve is cancelled.',
+      createdAt: new Date().toISOString(),
+    },
+  ];
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -646,6 +758,229 @@ export default function CardsSection() {
         <p className="text-xs text-gray-400 text-center">
           + {extraData.cards.length} more card{extraData.cards.length !== 1 ? 's' : ''} from the full app
         </p>
+      )}
+
+      {/* Cards to Consider */}
+      <CardsWatchlist />
+    </div>
+  );
+}
+
+// ── Cards Watchlist Component ─────────────────────────────────────────────────
+
+function CardsWatchlist() {
+  const [cards, setCards] = useState<WatchlistCard[]>([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<WatchlistStatus | 'active'>('active');
+  const [form, setForm] = useState<Partial<WatchlistCard>>({
+    name: '', issuer: '', annualFee: 0, status: 'watching', priority: 'medium', notes: '',
+  });
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(WATCHLIST_KEY);
+      if (stored) {
+        const parsed: WatchlistCard[] = JSON.parse(stored);
+        const seeds = buildSeedWatchlist();
+        const existingIds = new Set(parsed.map(c => c.id));
+        const missing = seeds.filter(s => !existingIds.has(s.id));
+        const merged = missing.length > 0 ? [...missing, ...parsed] : parsed;
+        setCards(merged);
+        if (missing.length > 0) localStorage.setItem(WATCHLIST_KEY, JSON.stringify(merged));
+      } else {
+        const seeds = buildSeedWatchlist();
+        setCards(seeds);
+        localStorage.setItem(WATCHLIST_KEY, JSON.stringify(seeds));
+      }
+    } catch {}
+  }, []);
+
+  function save(next: WatchlistCard[]) {
+    setCards(next);
+    localStorage.setItem(WATCHLIST_KEY, JSON.stringify(next));
+  }
+
+  function updateCard(id: string, updates: Partial<WatchlistCard>) {
+    save(cards.map(c => c.id === id ? { ...c, ...updates } : c));
+  }
+
+  function deleteCard(id: string) {
+    save(cards.filter(c => c.id !== id));
+  }
+
+  function addCard() {
+    if (!form.name?.trim()) return;
+    const card: WatchlistCard = {
+      id: crypto.randomUUID(),
+      name: form.name.trim(),
+      issuer: form.issuer?.trim() ?? '',
+      annualFee: form.annualFee ?? 0,
+      welcomeBonus: form.welcomeBonus?.trim(),
+      spendRequirement: form.spendRequirement?.trim(),
+      bonusExpires: form.bonusExpires,
+      estimatedValue: form.estimatedValue,
+      minCreditScore: form.minCreditScore,
+      status: form.status ?? 'watching',
+      priority: form.priority ?? 'medium',
+      notes: form.notes?.trim(),
+      applyUrl: form.applyUrl?.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    save([card, ...cards]);
+    setForm({ name: '', issuer: '', annualFee: 0, status: 'watching', priority: 'medium', notes: '' });
+    setShowAdd(false);
+  }
+
+  const activeStatuses: WatchlistStatus[] = ['watching', 'apply_when_ready', 'applied'];
+  const filtered = filterStatus === 'active'
+    ? cards.filter(c => activeStatuses.includes(c.status))
+    : cards.filter(c => c.status === filterStatus);
+
+  const activeCount = cards.filter(c => activeStatuses.includes(c.status)).length;
+
+  return (
+    <div className="space-y-3">
+      {/* Section header */}
+      <div className="flex items-center justify-between pt-2">
+        <div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">🎯 Cards to Consider</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Track offers and apply when your credit score is ready</p>
+        </div>
+        <button
+          onClick={() => setShowAdd(s => !s)}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg"
+        >
+          <Plus size={14} /> Add
+        </button>
+      </div>
+
+      {/* Filter tabs */}
+      <div className="flex gap-1 flex-wrap">
+        {(['active', 'watching', 'apply_when_ready', 'applied', 'approved', 'skipped'] as const).map(s => (
+          <button
+            key={s}
+            onClick={() => setFilterStatus(s)}
+            className={`px-3 py-1 text-xs rounded-full transition-colors ${
+              filterStatus === s
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+            }`}
+          >
+            {s === 'active' ? `Active (${activeCount})` : WATCHLIST_STATUS_LABELS[s]}
+          </button>
+        ))}
+      </div>
+
+      {/* Add form */}
+      {showAdd && (
+        <div className="p-4 border border-indigo-200 dark:border-indigo-800 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <input className="col-span-2 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+              placeholder="Card name *" value={form.name ?? ''}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+            <input className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+              placeholder="Issuer (e.g. Chase)" value={form.issuer ?? ''}
+              onChange={e => setForm(f => ({ ...f, issuer: e.target.value }))} />
+            <input type="number" className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+              placeholder="Annual fee ($)" value={form.annualFee ?? ''}
+              onChange={e => setForm(f => ({ ...f, annualFee: Number(e.target.value) }))} />
+            <input className="col-span-2 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+              placeholder="Welcome bonus (e.g. 60,000 miles)" value={form.welcomeBonus ?? ''}
+              onChange={e => setForm(f => ({ ...f, welcomeBonus: e.target.value }))} />
+            <input className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+              placeholder="Spend requirement" value={form.spendRequirement ?? ''}
+              onChange={e => setForm(f => ({ ...f, spendRequirement: e.target.value }))} />
+            <input type="number" className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+              placeholder="Estimated value ($)" value={form.estimatedValue ?? ''}
+              onChange={e => setForm(f => ({ ...f, estimatedValue: Number(e.target.value) }))} />
+            <select className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+              value={form.priority ?? 'medium'}
+              onChange={e => setForm(f => ({ ...f, priority: e.target.value as WatchlistPriority }))}>
+              <option value="high">⭐ High priority</option>
+              <option value="medium">Medium priority</option>
+              <option value="low">Low priority</option>
+            </select>
+            <input type="number" className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+              placeholder="Min credit score" value={form.minCreditScore ?? ''}
+              onChange={e => setForm(f => ({ ...f, minCreditScore: Number(e.target.value) }))} />
+            <textarea className="col-span-2 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 resize-none"
+              rows={2} placeholder="Notes / why you want this card"
+              value={form.notes ?? ''}
+              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={addCard} className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">Add Card</button>
+            <button onClick={() => setShowAdd(false)} className="px-4 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded-lg">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Card list */}
+      {filtered.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-6">No cards in this filter.</p>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map(c => (
+            <div key={c.id} className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-white dark:bg-gray-900 space-y-2">
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Star size={14} className={PRIORITY_COLORS[c.priority]} fill="currentColor" />
+                    <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">{c.name}</span>
+                    <span className="text-xs text-gray-400">{c.issuer}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${WATCHLIST_STATUS_COLORS[c.status]}`}>
+                      {WATCHLIST_STATUS_LABELS[c.status]}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3 mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    <span>💳 ${c.annualFee}/yr fee</span>
+                    {c.estimatedValue != null && c.estimatedValue > 0 && (
+                      <span className="text-green-600 dark:text-green-400 font-medium">🎁 ~${c.estimatedValue} value</span>
+                    )}
+                    {c.minCreditScore && (
+                      <span className="flex items-center gap-1">
+                        <Clock size={11} />
+                        Need {c.minCreditScore}+ score
+                      </span>
+                    )}
+                    {c.bonusExpires && (
+                      <span className="text-amber-600 dark:text-amber-400">
+                        ⏰ Offer ends {new Date(c.bonusExpires + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+
+                  {c.welcomeBonus && (
+                    <p className="text-xs mt-1 text-indigo-600 dark:text-indigo-400 font-medium">
+                      🎯 {c.welcomeBonus}
+                      {c.spendRequirement && <span className="text-gray-400 font-normal"> — {c.spendRequirement}</span>}
+                    </p>
+                  )}
+
+                  {c.notes && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{c.notes}</p>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1.5 items-end flex-shrink-0">
+                  <select
+                    className="text-xs border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 bg-white dark:bg-gray-800"
+                    value={c.status}
+                    onChange={e => updateCard(c.id, { status: e.target.value as WatchlistStatus })}
+                  >
+                    {(Object.keys(WATCHLIST_STATUS_LABELS) as WatchlistStatus[]).map(s => (
+                      <option key={s} value={s}>{WATCHLIST_STATUS_LABELS[s]}</option>
+                    ))}
+                  </select>
+                  <button onClick={() => deleteCard(c.id)} className="p-1 text-gray-300 hover:text-red-500 transition-colors">
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
