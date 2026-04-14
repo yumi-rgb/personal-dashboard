@@ -132,7 +132,25 @@ function buildSeedTasks(): PersonalTask[] {
     return partial;
   }
 
+  function makeOneTime(title: string, dueDate?: string, notes?: string): PersonalTask {
+    return {
+      id: crypto.randomUUID(),
+      title,
+      done: false,
+      createdAt: new Date().toISOString(),
+      recurrence: 'none',
+      dueDate,
+      notes,
+    };
+  }
+
   return [
+    // ── Trips ──
+    makeOneTime('✈️ Plan trip to Mexico', '2026-04-30', 'End of April — research flights, hotels, activities'),
+    makeOneTime('🎰 Plan trip to Las Vegas', undefined, 'Research flights, hotels, shows'),
+    makeOneTime('🔴 Plan trip to Sedona', undefined, 'Hiking, vortexes, spa — research best time to go'),
+    makeOneTime('🥃 Plan Kentucky Bourbon Trail', undefined, 'Distillery tours — Louisville/Lexington area, best in spring/fall'),
+    // ── Recurring ──
     makeRecurring('💉 Take Tirzepatide', 'weekly', { recurrenceDayOfWeek: 0, notes: 'Weekly injection — rotate sites' }),
     makeRecurring('💆 Deep condition hair', 'weekly', { recurrenceDayOfWeek: 0, notes: 'Leave in 20–30 min under heat cap' }),
     makeRecurring('💊 Sort medications', 'every_x_days', { recurrenceInterval: 21 }),

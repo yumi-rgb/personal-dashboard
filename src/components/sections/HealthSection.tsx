@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, Trash2, Activity, Scale, Ruler } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Trash2, Activity, Scale, Ruler, Droplets } from 'lucide-react';
 import { healthStorage } from '@/lib/storage';
 import { generateId, today, formatDate } from '@/lib/utils';
 import { HealthData, WorkoutEntry, WeightEntry, BodyMetricEntry } from '@/lib/types';
@@ -11,9 +11,128 @@ import { Input, Textarea, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { usePoints } from '@/lib/PointsContext';
 
+const WATER_KEY = 'water-tracker-v1';
+const WATER_GOAL = 10; // cups per day (80 oz)
+
+interface WaterLog {
+  date: string;
+  cups: number;
+}
+
+function WaterTracker() {
+  const { award } = usePoints();
+  const [log, setLog] = useState<WaterLog>({ date: today(), cups: 0 });
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(WATER_KEY);
+      if (stored) {
+        const parsed: WaterLog = JSON.parse(stored);
+        // Reset if it's a new day
+        if (parsed.date !== today()) {
+          const fresh = { date: today(), cups: 0 };
+          setLog(fresh);
+          localStorage.setItem(WATER_KEY, JSON.stringify(fresh));
+        } else {
+          setLog(parsed);
+        }
+      }
+    } catch {}
+  }, []);
+
+  function save(next: WaterLog) {
+    setLog(next);
+    localStorage.setItem(WATER_KEY, JSON.stringify(next));
+  }
+
+  function addCup() {
+    if (log.cups >= WATER_GOAL) return;
+    const next = { ...log, cups: log.cups + 1 };
+    save(next);
+    if (next.cups === WATER_GOAL) {
+      award({ date: today(), action: 'water_goal', description: 'Hit daily water goal (10 cups)', points: 10, key: `water_goal_${today()}` });
+    }
+  }
+
+  function removeCup() {
+    if (log.cups <= 0) return;
+    save({ ...log, cups: log.cups - 1 });
+  }
+
+  const oz = log.cups * 8;
+  const goalReached = log.cups >= WATER_GOAL;
+  const pct = Math.min(100, (log.cups / WATER_GOAL) * 100);
+
+  return (
+    <div className="space-y-4">
+      <Card title="💧 Daily Water Intake">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm text-gray-500 dark:text-gray-400">Goal: {WATER_GOAL} cups · {WATER_GOAL * 8} oz</span>
+          {goalReached && <span className="text-xs font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full">🎉 Goal reached!</span>}
+        </div>
+
+        {/* Progress bar */}
+        <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 mb-4 overflow-hidden">
+          <div
+            className={`h-3 rounded-full transition-all duration-300 ${goalReached ? 'bg-green-500' : 'bg-blue-500'}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+
+        {/* Cup buttons */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {Array.from({ length: WATER_GOAL }).map((_, i) => (
+            <button
+              key={i}
+              onClick={addCup}
+              className={`w-10 h-10 rounded-xl text-xl transition-all ${
+                i < log.cups
+                  ? 'bg-blue-500 text-white shadow-sm scale-105'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+              }`}
+              title={i < log.cups ? 'Logged' : 'Tap to add a cup'}
+            >
+              💧
+            </button>
+          ))}
+        </div>
+
+        {/* Count & controls */}
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">{log.cups}</span>
+            <span className="text-gray-500 dark:text-gray-400 text-sm ml-1">/ {WATER_GOAL} cups</span>
+            <span className="text-gray-400 dark:text-gray-500 text-sm ml-3">({oz} oz)</span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={removeCup}
+              disabled={log.cups === 0}
+              className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30 transition-colors"
+            >
+              − Undo
+            </button>
+            <button
+              onClick={addCup}
+              disabled={log.cups >= WATER_GOAL}
+              className="px-3 py-1.5 text-sm rounded-lg bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-30 transition-colors"
+            >
+              + Cup
+            </button>
+          </div>
+        </div>
+
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
+          Resets automatically each morning · On Tirzepatide, aim for 80–96 oz daily
+        </p>
+      </Card>
+    </div>
+  );
+}
+
 const EXERCISE_TYPES = ['Running', 'Walking', 'Cycling', 'Swimming', 'Weight Training', 'Yoga', 'HIIT', 'Pilates', 'CrossFit', 'Sports', 'Other'];
 
-type SubTab = 'workouts' | 'weight' | 'metrics';
+type SubTab = 'water' | 'workouts' | 'weight' | 'metrics';
 
 // Weight chart — defined outside component to avoid "components created during render" lint error
 function WeightChart({ weights }: { weights: WeightEntry[] }) {
@@ -75,7 +194,7 @@ function initMetricForm(data: HealthData): Record<string, string> {
 
 export default function HealthSection() {
   const [data, setData] = useState<HealthData>(initHealthData);
-  const [subTab, setSubTab] = useState<SubTab>('workouts');
+  const [subTab, setSubTab] = useState<SubTab>('water');
   const { award } = usePoints();
   const [showWorkoutForm, setShowWorkoutForm] = useState(false);
   const [showWeightForm, setShowWeightForm] = useState(false);
@@ -158,6 +277,7 @@ export default function HealthSection() {
   const deleteMetricEntry = (id: string) => save({ ...data, bodyMetrics: data.bodyMetrics.filter(m => m.id !== id) });
 
   const subTabs: { id: SubTab; label: string; icon: typeof Activity }[] = [
+    { id: 'water', label: 'Water', icon: Droplets },
     { id: 'workouts', label: 'Workouts', icon: Activity },
     { id: 'weight', label: 'Weight', icon: Scale },
     { id: 'metrics', label: 'Body Metrics', icon: Ruler },
@@ -189,6 +309,9 @@ export default function HealthSection() {
           </button>
         ))}
       </div>
+
+      {/* Water */}
+      {subTab === 'water' && <WaterTracker />}
 
       {/* Workouts */}
       {subTab === 'workouts' && (
