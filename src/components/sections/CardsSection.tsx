@@ -113,7 +113,7 @@ function buildSeedWatchlist(): WatchlistCard[] {
       minCreditScore: 720,
       status: 'watching',
       priority: 'low',
-      notes: '$300 travel credit + 10,000 anniversary miles (~$100) effectively make annual fee $0. Includes Priority Pass lounge access (already have via Sapphire Reserve). Only consider if Sapphire Reserve is cancelled.',
+      notes: '$300 Capital One Travel credit + 10,000 anniversary miles = net +$90/year after fee. 2x on all purchases (great everyday card). 10x on hotels/cars through Capital One Travel. Perfect for Kentucky Bourbon Trail — use $300 credit for Lexington hotel + 10x on car rental CVG→Lexington. HUSBAND should apply (needs 720+ score). You already have Priority Pass via Sapphire Reserve so lounge benefit is redundant for you.',
       createdAt: new Date().toISOString(),
     },
   ];
