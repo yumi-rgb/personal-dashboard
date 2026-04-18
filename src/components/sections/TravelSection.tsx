@@ -73,20 +73,20 @@ function buildSeedTrips(): Trip[] {
   return [
     {
       id: 'trip-mexico',
-      destination: 'Mexico',
+      destination: 'Cancún, Mexico',
       emoji: '🇲🇽',
-      subtitle: 'Beach & culture getaway',
-      departureDate: '2026-04-25',
-      returnDate: '2026-04-30',
-      status: 'planning',
+      subtitle: 'Secrets Mirabel Cancun Resort & Spa',
+      departureDate: '2026-04-24',
+      returnDate: '2026-04-29',
+      status: 'booked',
       budget: 3000,
       spent: 0,
-      notes: 'End of April trip. Check Frontier Go Wild pass for flights to CUN or MEX.',
+      notes: '✅ HOTEL CONFIRMED — Conf #58154228\nSecrets Mirabel Cancun Resort & Spa (Hyatt Secrets — adults-only all-inclusive)\nApr 24 check-in (3pm) → Apr 29 check-out (12pm) · 5 nights · 2 adults\nRoom: Tropical View Balcony King · Paid with Hyatt free night cert (Explorist)\nBlvd. Kukulcan Km 19.5, Cancún · +52 998 891 5000\nCancellation: within 3 days of arrival = 1-night penalty. As Explorist, can cancel until 11:59pm the day before.\nStill need: flights via Frontier Go Wild pass to CUN.',
       createdAt: new Date().toISOString(),
       checklist: [
         makeCheck('Check Frontier Go Wild pass for flights to Cancún (CUN)', 'flights'),
         makeCheck('Book round-trip flights', 'flights'),
-        makeCheck('Book resort or hotel (all-inclusive option?)', 'hotel'),
+        makeCheck('Hotel booked: Secrets Mirabel Cancun Resorts & Spa ✅', 'hotel', true),
         makeCheck('Check passport expiry — needs 6 months validity', 'documents'),
         makeCheck('Travel insurance (Chase Sapphire Reserve covers trip cancellation)', 'documents'),
         makeCheck('Research currency exchange / get pesos', 'documents'),
@@ -424,20 +424,44 @@ export default function TravelSection() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
+      let trips: Trip[];
+
       if (stored) {
         const parsed: Trip[] = JSON.parse(stored);
         // Merge: add seed trips that aren't already stored
         const seeds = buildSeedTrips();
         const existingIds = new Set(parsed.map(t => t.id));
         const missing = seeds.filter(s => !existingIds.has(s.id));
-        const merged = missing.length > 0 ? [...missing, ...parsed] : parsed;
-        setTrips(merged);
-        if (missing.length > 0) localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        trips = missing.length > 0 ? [...missing, ...parsed] : parsed;
       } else {
-        const seeds = buildSeedTrips();
-        setTrips(seeds);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(seeds));
+        trips = buildSeedTrips();
       }
+
+      // Migration: update Mexico trip to reflect confirmed booking
+      trips = trips.map(t => {
+        if (t.id === 'trip-mexico' && (t.status === 'planning' || t.departureDate === '2026-04-25')) {
+          const updatedChecklist = t.checklist.map(c => {
+            if (c.label.includes('Book resort or hotel') || c.label.includes('Hotel booked:')) {
+              return { ...c, label: 'Hotel booked: Secrets Mirabel Cancun Resort & Spa ✅', done: true };
+            }
+            return c;
+          });
+          return {
+            ...t,
+            destination: 'Cancún, Mexico',
+            subtitle: 'Secrets Mirabel Cancun Resort & Spa',
+            departureDate: '2026-04-24',
+            returnDate: '2026-04-29',
+            status: 'booked' as TripStatus,
+            notes: '✅ HOTEL CONFIRMED — Conf #58154228\nSecrets Mirabel Cancun Resort & Spa (Hyatt Secrets — adults-only all-inclusive)\nApr 24 check-in (3pm) → Apr 29 check-out (12pm) · 5 nights · 2 adults\nRoom: Tropical View Balcony King · Paid with Hyatt free night cert (Explorist)\nBlvd. Kukulcan Km 19.5, Cancún · +52 998 891 5000\nCancellation: within 3 days of arrival = 1-night penalty. As Explorist, can cancel until 11:59pm the day before.\nStill need: flights via Frontier Go Wild pass to CUN.',
+            checklist: updatedChecklist,
+          };
+        }
+        return t;
+      });
+
+      setTrips(trips);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
     } catch {}
   }, []);
 
