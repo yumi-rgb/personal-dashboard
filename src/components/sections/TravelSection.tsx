@@ -75,18 +75,20 @@ function buildSeedTrips(): Trip[] {
       id: 'trip-mexico',
       destination: 'Cancún, Mexico',
       emoji: '🇲🇽',
-      subtitle: 'Secrets Mirabel Cancun Resort & Spa',
+      subtitle: 'Secrets Mirabel → Dreams Sands (Apr 24 – May 1)',
       departureDate: '2026-04-24',
-      returnDate: '2026-04-29',
+      returnDate: '2026-05-01',
       status: 'booked',
       budget: 3000,
-      spent: 0,
-      notes: '✅ HOTEL CONFIRMED — Conf #58154228\nSecrets Mirabel Cancun Resort & Spa (Hyatt Secrets — adults-only all-inclusive)\nApr 24 check-in (3pm) → Apr 29 check-out (12pm) · 5 nights · 2 adults\nRoom: Tropical View Balcony King · Paid with Hyatt free night cert (Explorist)\nBlvd. Kukulcan Km 19.5, Cancún · +52 998 891 5000\nCancellation: within 3 days of arrival = 1-night penalty. As Explorist, can cancel until 11:59pm the day before.\nStill need: flights via Frontier Go Wild pass to CUN.',
+      spent: 672,
+      notes: '🏨 HOTEL 1 — Secrets Mirabel Cancun Resort & Spa (Hyatt Secrets)\n✅ Conf #58154228 · Apr 24 check-in (3pm) → Apr 29 check-out (12pm)\nRoom: Tropical View Balcony King · Paid with Hyatt free night cert (Explorist)\nBlvd. Kukulcan Km 19.5 · +52 998 891 5000\nCancel policy: Explorist can cancel until 11:59pm the day before arrival.\n\n🏨 HOTEL 2 — Dreams Sands Cancun Resort & Spa (UVC Member)\n✅ Conf #DD1-58848 · Apr 28 arrival → May 1 departure · 3 nights · $672 USD\nRoom: Partial Ocean View King · UVC Unlimited Nights member rate\n⚠️ Note: 1-day overlap with Secrets (Apr 28) — confirm early checkout plan.\nCancel: free 30+ days out; 1-night penalty 7–29 days out; 2-night penalty <7 days.\n\nStill need: flights via Frontier Go Wild pass to CUN.',
       createdAt: new Date().toISOString(),
       checklist: [
         makeCheck('Check Frontier Go Wild pass for flights to Cancún (CUN)', 'flights'),
         makeCheck('Book round-trip flights', 'flights'),
-        makeCheck('Hotel booked: Secrets Mirabel Cancun Resorts & Spa ✅', 'hotel', true),
+        makeCheck('Hotel 1 booked: Secrets Mirabel Cancun Resort & Spa ✅', 'hotel', true),
+        makeCheck('Hotel 2 booked: Dreams Sands Cancun Resort & Spa ✅', 'hotel', true),
+        makeCheck('⚠️ Resolve Apr 28 overlap — early checkout from Secrets or adjust Dreams check-in', 'hotel'),
         makeCheck('Check passport expiry — needs 6 months validity', 'documents'),
         makeCheck('Travel insurance (Chase Sapphire Reserve covers trip cancellation)', 'documents'),
         makeCheck('Research currency exchange / get pesos', 'documents'),
@@ -440,20 +442,29 @@ export default function TravelSection() {
       // Migration: update Mexico trip to reflect confirmed booking
       trips = trips.map(t => {
         if (t.id === 'trip-mexico' && (t.status === 'planning' || t.departureDate === '2026-04-25')) {
-          const updatedChecklist = t.checklist.map(c => {
-            if (c.label.includes('Book resort or hotel') || c.label.includes('Hotel booked:')) {
-              return { ...c, label: 'Hotel booked: Secrets Mirabel Cancun Resort & Spa ✅', done: true };
+          let updatedChecklist = t.checklist.map(c => {
+            if (c.label.includes('Book resort or hotel') || c.label.includes('Hotel booked:') || c.label.includes('Hotel 1 booked:')) {
+              return { ...c, label: 'Hotel 1 booked: Secrets Mirabel Cancun Resort & Spa ✅', done: true };
             }
             return c;
           });
+          // Add Dreams Sands items if missing
+          if (!updatedChecklist.some(c => c.label.includes('Dreams Sands'))) {
+            updatedChecklist = [
+              ...updatedChecklist,
+              { id: crypto.randomUUID(), label: 'Hotel 2 booked: Dreams Sands Cancun Resort & Spa ✅', category: 'hotel' as CheckCategory, done: true },
+              { id: crypto.randomUUID(), label: '⚠️ Resolve Apr 28 overlap — early checkout from Secrets or adjust Dreams check-in', category: 'hotel' as CheckCategory, done: false },
+            ];
+          }
           return {
             ...t,
             destination: 'Cancún, Mexico',
-            subtitle: 'Secrets Mirabel Cancun Resort & Spa',
+            subtitle: 'Secrets Mirabel → Dreams Sands (Apr 24 – May 1)',
             departureDate: '2026-04-24',
-            returnDate: '2026-04-29',
+            returnDate: '2026-05-01',
             status: 'booked' as TripStatus,
-            notes: '✅ HOTEL CONFIRMED — Conf #58154228\nSecrets Mirabel Cancun Resort & Spa (Hyatt Secrets — adults-only all-inclusive)\nApr 24 check-in (3pm) → Apr 29 check-out (12pm) · 5 nights · 2 adults\nRoom: Tropical View Balcony King · Paid with Hyatt free night cert (Explorist)\nBlvd. Kukulcan Km 19.5, Cancún · +52 998 891 5000\nCancellation: within 3 days of arrival = 1-night penalty. As Explorist, can cancel until 11:59pm the day before.\nStill need: flights via Frontier Go Wild pass to CUN.',
+            spent: 672,
+            notes: '🏨 HOTEL 1 — Secrets Mirabel Cancun Resort & Spa (Hyatt Secrets)\n✅ Conf #58154228 · Apr 24 check-in (3pm) → Apr 29 check-out (12pm)\nRoom: Tropical View Balcony King · Paid with Hyatt free night cert (Explorist)\nBlvd. Kukulcan Km 19.5 · +52 998 891 5000\nCancel policy: Explorist can cancel until 11:59pm the day before arrival.\n\n🏨 HOTEL 2 — Dreams Sands Cancun Resort & Spa (UVC Member)\n✅ Conf #DD1-58848 · Apr 28 arrival → May 1 departure · 3 nights · $672 USD\nRoom: Partial Ocean View King · UVC Unlimited Nights member rate\n⚠️ Note: 1-day overlap with Secrets (Apr 28) — confirm early checkout plan.\nCancel: free 30+ days out; 1-night penalty 7–29 days out; 2-night penalty <7 days.\n\nStill need: flights via Frontier Go Wild pass to CUN.',
             checklist: updatedChecklist,
           };
         }
