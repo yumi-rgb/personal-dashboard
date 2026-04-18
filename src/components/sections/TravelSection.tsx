@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, ChevronDown, ChevronUp, CheckCircle2, Circle, MapPin, Calendar, DollarSign, Plane } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, CheckCircle2, Circle, Calendar, DollarSign, Plane, Star, Phone, Mail, Globe, Info } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { today } from '@/lib/utils';
 
@@ -415,9 +415,343 @@ function TripCard({ trip, onUpdate, onDelete }: {
   );
 }
 
+// ── UVC Membership ────────────────────────────────────────────────────────────
+
+const UVC_KEY = 'uvc-membership-v1';
+
+interface UVCUsage {
+  premierNightsUsed: number;   // out of 28 total
+  vipWeeksUsed: number;        // out of 8 total
+  guestCertsUsed: number;      // out of 12 per year (expire Dec 31)
+  firstReservationUsed: boolean; // first one free per anniversary year
+  rewardCreditsUsed: number;   // out of 8250
+  notes: string;
+}
+
+const DEFAULT_UVC: UVCUsage = {
+  premierNightsUsed: 0,
+  vipWeeksUsed: 0,
+  guestCertsUsed: 0,
+  firstReservationUsed: false,
+  rewardCreditsUsed: 0,
+  notes: '',
+};
+
+const UVC_BRANDS = [
+  { emoji: '🤫', name: 'Secrets Resorts & Spas', note: 'Adults-only, flagship brand' },
+  { emoji: '🌅', name: 'Dreams Resorts & Spas', note: 'Family-friendly all-inclusive' },
+  { emoji: '🎉', name: 'Breathless Resorts & Spas', note: 'Adults-only, party/social vibe' },
+  { emoji: '🌿', name: 'Zoëtry Wellness & Spa', note: 'Boutique wellness, smaller properties' },
+  { emoji: '🌞', name: 'Now Resorts & Spas', note: 'Family-friendly, lively atmosphere' },
+  { emoji: '☀️', name: 'Sunscape Resorts & Spas', note: 'Budget-friendly, family focus' },
+];
+
+const UVC_2FOR1 = [
+  'Dreams Las Mareas', 'Dreams Playa Mujeres', 'Dreams Bahía Mita',
+  'Breathless Riviera Cancún', 'Breathless Montego Bay', 'Breathless Cabo San Lucas', 'Breathless Cancún Soul',
+  'Secrets Maroma', 'Secrets Playa Mujeres', 'Secrets Riviera Cancún', 'Secrets The Vine',
+  'Secrets Saint James', 'Secrets Wild Orchid', 'Secrets Puerto Los Cabos', 'Secrets Akumal',
+  'Secrets Cap Cana', 'Secrets Papagayo', 'Secrets St. Martin', 'Secrets Moxché', 'Secrets Royal Beach',
+  'Secrets Bahía Mita', 'Secrets Tides Punta Cana', 'Secrets Playa Blanca', 'Secrets Tulum',
+  'Zoëtry Brand Hotels',
+];
+
+function UVCSection() {
+  const [usage, setUsage] = useState<UVCUsage>(DEFAULT_UVC);
+  const [showBrands, setShowBrands] = useState(false);
+  const [show2for1, setShow2for1] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(UVC_KEY);
+      if (stored) setUsage(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  function save(next: UVCUsage) {
+    setUsage(next);
+    localStorage.setItem(UVC_KEY, JSON.stringify(next));
+  }
+
+  function adj(field: keyof UVCUsage, delta: number, max: number) {
+    const cur = usage[field] as number;
+    const next = Math.max(0, Math.min(max, cur + delta));
+    save({ ...usage, [field]: next });
+  }
+
+  const premierNightsLeft = 28 - usage.premierNightsUsed;
+  const vipWeeksLeft = 8 - usage.vipWeeksUsed;
+  const guestCertsLeft = 12 - usage.guestCertsUsed;
+  const rewardCreditsLeft = 8250 - usage.rewardCreditsUsed;
+
+  // Hyatt Explorist status: granted Jun 2025, valid through end of 2027 (current year + 26 months)
+  const exploristExpiry = 'December 31, 2027';
+
+  return (
+    <div className="space-y-5">
+      {/* Header card */}
+      <div className="bg-gradient-to-r from-teal-600 to-cyan-600 rounded-2xl p-5 text-white">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Star size={18} className="text-yellow-300 fill-yellow-300" />
+              <span className="text-lg font-bold">PLATINUM Membership</span>
+            </div>
+            <p className="text-teal-100 text-sm">Unlimited Vacation Club® · Contract SA1-010663</p>
+            <p className="text-teal-100 text-xs mt-0.5">Signed June 1, 2025 · 40-year term · All AMResorts brands</p>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-teal-200 mb-0.5">Previous contracts</div>
+            <div className="text-xs text-teal-100">ZP1-000619 (Gold Plus)</div>
+            <div className="text-xs text-teal-100">SVX-001484 (Choices)</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-3 mt-4">
+          <div className="bg-white/20 rounded-xl p-3 text-center">
+            <div className="text-xl font-bold">${(318.83).toFixed(2)}</div>
+            <div className="text-xs text-teal-100">monthly payment</div>
+            <div className="text-xs text-teal-200">due 1st of month</div>
+          </div>
+          <div className="bg-white/20 rounded-xl p-3 text-center">
+            <div className="text-xl font-bold">$185</div>
+            <div className="text-xs text-teal-100">annual renewal</div>
+            <div className="text-xs text-teal-200">due Jun 1 each year</div>
+          </div>
+          <div className="bg-white/20 rounded-xl p-3 text-center">
+            <div className="text-xl font-bold">25%</div>
+            <div className="text-xs text-teal-100">discount off</div>
+            <div className="text-xs text-teal-200">lowest public rate</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Usage Trackers */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Premier Nights */}
+        <Card>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">🌙 Premier Nights</h3>
+              <p className="text-xs text-gray-500">Min 2/stay · Deluxe Room (or Preferred if avail) · Excl. major holidays</p>
+            </div>
+            <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">{premierNightsLeft}<span className="text-sm font-normal text-gray-400">/28</span></div>
+          </div>
+          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 mb-3">
+            <div className="h-2 bg-teal-500 rounded-full transition-all" style={{ width: `${(premierNightsLeft / 28) * 100}%` }} />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600 dark:text-gray-400">{usage.premierNightsUsed} used</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => adj('premierNightsUsed', -1, 28)} className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-lg font-bold flex items-center justify-center hover:bg-teal-100">−</button>
+              <button onClick={() => adj('premierNightsUsed', 1, 28)} className="w-7 h-7 rounded-lg bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 text-lg font-bold flex items-center justify-center hover:bg-teal-200">+</button>
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">💡 7 nights carried over from ZP1 contract. 11 more release with monthly payments.</p>
+        </Card>
+
+        {/* VIP Weeks */}
+        <Card>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">⭐ VIP Weeks</h3>
+              <p className="text-xs text-gray-500">$2,400/week · 2 people · Deluxe Room · All year (excl. holidays)</p>
+            </div>
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{vipWeeksLeft}<span className="text-sm font-normal text-gray-400">/8</span></div>
+          </div>
+          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 mb-3">
+            <div className="h-2 bg-amber-500 rounded-full transition-all" style={{ width: `${(vipWeeksLeft / 8) * 100}%` }} />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600 dark:text-gray-400">{usage.vipWeeksUsed} used</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => adj('vipWeeksUsed', -1, 8)} className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-lg font-bold flex items-center justify-center hover:bg-amber-100">−</button>
+              <button onClick={() => adj('vipWeeksUsed', 1, 8)} className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-lg font-bold flex items-center justify-center hover:bg-amber-200">+</button>
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">💡 For longer stays — great value at a fixed $2,400/wk vs. full rate.</p>
+        </Card>
+
+        {/* Guest Certificates */}
+        <Card>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">🎟️ Guest Certificates</h3>
+              <p className="text-xs text-gray-500">12/year · Friends & family get 25% discount · Expire Dec 31</p>
+            </div>
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{guestCertsLeft}<span className="text-sm font-normal text-gray-400">/12</span></div>
+          </div>
+          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 mb-3">
+            <div className="h-2 bg-purple-500 rounded-full transition-all" style={{ width: `${(guestCertsLeft / 12) * 100}%` }} />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600 dark:text-gray-400">{usage.guestCertsUsed} used</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => adj('guestCertsUsed', -1, 12)} className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-lg font-bold flex items-center justify-center hover:bg-purple-100">−</button>
+              <button onClick={() => adj('guestCertsUsed', 1, 12)} className="w-7 h-7 rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-lg font-bold flex items-center justify-center hover:bg-purple-200">+</button>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs text-gray-400">First reservation/yr free:</span>
+            <button
+              onClick={() => save({ ...usage, firstReservationUsed: !usage.firstReservationUsed })}
+              className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors ${usage.firstReservationUsed ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}
+            >
+              {usage.firstReservationUsed ? 'Used ✓' : 'Available'}
+            </button>
+          </div>
+        </Card>
+
+        {/* U Experiences Reward Credits */}
+        <Card>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">💎 Reward Credits</h3>
+              <p className="text-xs text-gray-500">U Experiences program · Use on cruises, hotels, tours · 1yr expiry</p>
+            </div>
+            <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">${rewardCreditsLeft.toLocaleString()}</div>
+          </div>
+          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 mb-3">
+            <div className="h-2 bg-indigo-500 rounded-full transition-all" style={{ width: `${(rewardCreditsLeft / 8250) * 100}%` }} />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600 dark:text-gray-400">${usage.rewardCreditsUsed.toLocaleString()} used</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => adj('rewardCreditsUsed', -100, 8250)} className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-bold flex items-center justify-center hover:bg-indigo-100">−</button>
+              <button onClick={() => adj('rewardCreditsUsed', 100, 8250)} className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-sm font-bold flex items-center justify-center hover:bg-indigo-200">+</button>
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">+$5,500 anniversary credits · 1,000 cruise certificate included</p>
+        </Card>
+      </div>
+
+      {/* Benefits & Status */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-lg">🌍</span>
+            <span className="font-semibold text-green-800 dark:text-green-300 text-sm">Hyatt Explorist Status</span>
+          </div>
+          <p className="text-xs text-green-700 dark:text-green-400">Valid through <strong>{exploristExpiry}</strong></p>
+          <p className="text-xs text-green-600 dark:text-green-500 mt-1">Room upgrades, late checkout, bonus points, waived resort fees at some properties</p>
+        </div>
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-lg">⛵</span>
+            <span className="font-semibold text-blue-800 dark:text-blue-300 text-sm">Yacht Certificates</span>
+          </div>
+          <p className="text-xs text-blue-700 dark:text-blue-400">34–45 ft yachts, up to 16 people</p>
+          <p className="text-xs text-blue-600 dark:text-blue-500 mt-1">Cancún, Cozumel, Puerto Vallarta, Los Cabos, Dominican Republic</p>
+        </div>
+        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-lg">🔄</span>
+            <span className="font-semibold text-purple-800 dark:text-purple-300 text-sm">RCI Exchange</span>
+          </div>
+          <p className="text-xs text-purple-700 dark:text-purple-400">4,200 exchange nights (600 weeks)</p>
+          <p className="text-xs text-purple-600 dark:text-purple-500 mt-1">2 yr RCI affiliation included · $299 exchange fee/week · Signature Selections access</p>
+        </div>
+      </div>
+
+      {/* Notes */}
+      <Card>
+        <label className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2 block">Membership Notes</label>
+        {editingNotes ? (
+          <textarea
+            autoFocus
+            className="w-full border border-indigo-300 dark:border-indigo-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 resize-none"
+            rows={3}
+            value={usage.notes}
+            onChange={e => save({ ...usage, notes: e.target.value })}
+            onBlur={() => setEditingNotes(false)}
+          />
+        ) : (
+          <p className="text-sm text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-1 -ml-1" onClick={() => setEditingNotes(true)}>
+            {usage.notes || <span className="text-gray-400 italic">Click to add notes (reservations made, upgrades received, etc.)…</span>}
+          </p>
+        )}
+      </Card>
+
+      {/* Contact */}
+      <Card>
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 text-sm">📞 Contact & Quick Reference</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+            <Phone size={14} /> <span>US/Canada: 1-844-797-7297</span>
+          </div>
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+            <Phone size={14} /> <span>Alt: 1-877-923-2582</span>
+          </div>
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+            <Mail size={14} /> <span>memberservices@unlimitedvacationclub.com</span>
+          </div>
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+            <Globe size={14} /> <span>unlimitedvacationclub.com</span>
+          </div>
+        </div>
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-gray-500">
+          <div><span className="font-medium">Reservation fee:</span> $25 (1st free/yr)</div>
+          <div><span className="font-medium">Min stay:</span> 2 nights</div>
+          <div><span className="font-medium">Book ahead:</span> 72hrs minimum</div>
+          <div><span className="font-medium">Beneficiary:</span> Carrie Reynolds</div>
+        </div>
+      </Card>
+
+      {/* Participating Brands */}
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+        <button
+          onClick={() => setShowBrands(b => !b)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800/50 text-left"
+        >
+          <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm">🏨 Participating Hotel Brands (PLATINUM — all brands, all seasons)</span>
+          {showBrands ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+        {showBrands && (
+          <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {UVC_BRANDS.map(b => (
+              <div key={b.name} className="flex items-start gap-2">
+                <span className="text-lg">{b.emoji}</span>
+                <div>
+                  <div className="text-sm font-medium text-gray-800 dark:text-gray-200">{b.name}</div>
+                  <div className="text-xs text-gray-500">{b.note}</div>
+                </div>
+              </div>
+            ))}
+            <div className="sm:col-span-2 mt-1 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <Info size={12} /> Impression by Secrets suites, Imperial Suites, and Premium Suites excluded from PLATINUM access.
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 2-for-1 Hotels */}
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+        <button
+          onClick={() => setShow2for1(b => !b)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800/50 text-left"
+        >
+          <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm">🔥 2-for-1 Category Hotels</span>
+          {show2for1 ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+        {show2for1 && (
+          <div className="px-4 py-3">
+            <p className="text-xs text-gray-500 mb-2">These properties have special 2-for-1 pricing for UVC members:</p>
+            <div className="flex flex-wrap gap-1.5">
+              {UVC_2FOR1.map(h => (
+                <span key={h} className="text-xs bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 rounded-full px-2.5 py-0.5">{h}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function TravelSection() {
+  const [activeTab, setActiveTab] = useState<'trips' | 'uvc'>('trips');
   const [trips, setTrips] = useState<Trip[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newDest, setNewDest] = useState('');
@@ -514,16 +848,38 @@ export default function TravelSection() {
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">✈️ Travel Planner</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            {active.length} trips in planning · Remember: use your <span className="font-medium text-indigo-600 dark:text-indigo-400">Frontier Go Wild pass</span> for flights!
+            {active.length} trips planned · <span className="font-medium text-indigo-600 dark:text-indigo-400">Frontier Go Wild</span> for flights · <span className="font-medium text-teal-600 dark:text-teal-400">UVC PLATINUM</span> for hotels
           </p>
         </div>
-        <button
-          onClick={() => setShowAddForm(s => !s)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors"
-        >
-          <Plus size={16} /> Add Trip
-        </button>
+        {activeTab === 'trips' && (
+          <button
+            onClick={() => setShowAddForm(s => !s)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors"
+          >
+            <Plus size={16} /> Add Trip
+          </button>
+        )}
       </div>
+
+      {/* Sub-tabs */}
+      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
+        {([['trips', '🗺️ My Trips'], ['uvc', '🌴 UVC Membership']] as const).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === id
+                ? 'border-teal-500 text-teal-700 dark:text-teal-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'uvc' && <UVCSection />}
+      {activeTab === 'trips' && (<>
 
       {showAddForm && (
         <Card>
@@ -566,6 +922,7 @@ export default function TravelSection() {
           </div>
         </div>
       )}
+      </>)}
     </div>
   );
 }
