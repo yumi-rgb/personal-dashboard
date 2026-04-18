@@ -415,6 +415,181 @@ function TripCard({ trip, onUpdate, onDelete }: {
   );
 }
 
+// ── Frontier Miles ────────────────────────────────────────────────────────────
+
+const FRONTIER_KEY = 'frontier-account-v1';
+
+interface FrontierAccount {
+  miles: number;
+  statusPoints: number;
+  notes: string;
+}
+
+const DEFAULT_FRONTIER: FrontierAccount = {
+  miles: 20497,
+  statusPoints: 0,
+  notes: '',
+};
+
+function FrontierSection() {
+  const [acct, setAcct] = useState<FrontierAccount>(DEFAULT_FRONTIER);
+  const [editingNotes, setEditingNotes] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(FRONTIER_KEY);
+      if (stored) setAcct(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  function save(next: FrontierAccount) {
+    setAcct(next);
+    localStorage.setItem(FRONTIER_KEY, JSON.stringify(next));
+  }
+
+  // Status tiers
+  const tiers = [
+    { name: 'Elite Gold', pts: 20000, color: 'text-yellow-600', bg: 'bg-yellow-500' },
+    { name: 'Elite Platinum', pts: 50000, color: 'text-slate-500', bg: 'bg-slate-400' },
+    { name: 'Elite Diamond', pts: 100000, color: 'text-cyan-600', bg: 'bg-cyan-500' },
+  ];
+  const nextTier = tiers.find(t => t.pts > acct.statusPoints) ?? tiers[tiers.length - 1];
+  const prevPts = tiers[tiers.indexOf(nextTier) - 1]?.pts ?? 0;
+  const progress = Math.min(100, ((acct.statusPoints - prevPts) / (nextTier.pts - prevPts)) * 100);
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-green-600 to-emerald-500 rounded-2xl p-5 text-white">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Plane size={18} className="text-white" />
+              <span className="text-lg font-bold">Frontier Miles</span>
+            </div>
+            <p className="text-green-100 text-sm">Member #90101397359 · Yu Kim Reynolds</p>
+            <p className="text-green-100 text-xs mt-0.5">Family Pool Head · 0 additional members</p>
+          </div>
+          <div className="text-right">
+            <div className="text-3xl font-bold">{acct.miles.toLocaleString()}</div>
+            <div className="text-green-200 text-xs">travel miles</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          <div className="bg-white/20 rounded-xl p-3">
+            <div className="text-xs text-green-100 mb-0.5">Go Wild! Annual Pass™</div>
+            <div className="font-bold">Expires Apr 30, 2027</div>
+            <div className="text-xs text-green-200">Auto-renews · All-you-can-fly</div>
+          </div>
+          <div className="bg-white/20 rounded-xl p-3">
+            <div className="text-xs text-green-100 mb-0.5">Elite Gold Status</div>
+            <div className="font-bold">Expires Dec 31, 2026</div>
+            <div className="text-xs text-green-200">Free carry-on · Group 1 boarding</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Miles editor */}
+      <Card>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">✈️ Miles Balance</h3>
+          <div className="flex items-center gap-2">
+            <button onClick={() => save({ ...acct, miles: Math.max(0, acct.miles - 500) })} className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold flex items-center justify-center hover:bg-green-100 text-sm">−</button>
+            <span className="text-2xl font-bold text-green-600 dark:text-green-400 w-24 text-center">{acct.miles.toLocaleString()}</span>
+            <button onClick={() => save({ ...acct, miles: acct.miles + 500 })} className="w-7 h-7 rounded-lg bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 font-bold flex items-center justify-center hover:bg-green-200 text-sm">+</button>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center text-sm">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
+            <div className="font-semibold text-gray-800 dark:text-gray-200">5,000</div>
+            <div className="text-xs text-gray-500">min redemption</div>
+          </div>
+          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2">
+            <div className="font-semibold text-green-700 dark:text-green-400">{Math.floor(acct.miles / 5000)}</div>
+            <div className="text-xs text-gray-500">award flights possible</div>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
+            <div className="font-semibold text-gray-800 dark:text-gray-200">Family</div>
+            <div className="text-xs text-gray-500">pool (you're head)</div>
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 mt-2">Miles never expire while your Frontier credit card account is open and in good standing. Use +/− buttons (500 increments) to update balance.</p>
+      </Card>
+
+      {/* Status progress */}
+      <Card>
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">🏆 Elite Status Progress</h3>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="flex-1">
+            <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <span className="font-medium text-yellow-600">Elite Gold ✓</span>
+              <span>{acct.statusPoints.toLocaleString()} / {nextTier.pts.toLocaleString()} pts → {nextTier.name}</span>
+            </div>
+            <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3">
+              <div className={`h-3 rounded-full transition-all ${nextTier.bg}`} style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => save({ ...acct, statusPoints: Math.max(0, acct.statusPoints - 1000) })} className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold flex items-center justify-center hover:bg-yellow-100 text-sm">−</button>
+            <button onClick={() => save({ ...acct, statusPoints: acct.statusPoints + 1000 })} className="w-7 h-7 rounded-lg bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 font-bold flex items-center justify-center hover:bg-yellow-200 text-sm">+</button>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          {tiers.map(t => (
+            <div key={t.name} className={`rounded-lg p-2 border ${acct.statusPoints >= t.pts ? 'border-green-300 bg-green-50 dark:bg-green-900/20 dark:border-green-700' : 'border-gray-200 dark:border-gray-700'}`}>
+              <div className={`font-semibold ${acct.statusPoints >= t.pts ? 'text-green-700 dark:text-green-400' : 'text-gray-500'}`}>{t.name}</div>
+              <div className="text-gray-500">{t.pts.toLocaleString()} pts</div>
+              {acct.statusPoints >= t.pts && <div className="text-green-600 dark:text-green-400">✓ Achieved</div>}
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-gray-400 mt-2">Status points reset each year. Use +/− (1,000 increments) to track as you fly.</p>
+      </Card>
+
+      {/* Elite Gold Benefits */}
+      <Card>
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 text-sm">⭐ Your Elite Gold Benefits (expires 12/31/26)</h3>
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          {[
+            ['🧳', 'Free carry-on bag'],
+            ['💺', 'Premium seat at check-in'],
+            ['1️⃣', 'Group 1 boarding'],
+            ['🚫', 'No change/cancel fees'],
+            ['📞', 'Priority customer care'],
+            ['🔄', 'Miles never expire (w/ card)'],
+          ].map(([icon, benefit]) => (
+            <div key={benefit as string} className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+              <span>{icon}</span><span>{benefit}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+          <p className="text-xs text-gray-500"><strong>Next tier — Elite Platinum (50k pts):</strong> Free checked bag, premium seat at booking, pet-in-cabin fee waiver, companion travel</p>
+        </div>
+      </Card>
+
+      {/* Notes */}
+      <Card>
+        <label className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2 block">Notes</label>
+        {editingNotes ? (
+          <textarea
+            autoFocus
+            className="w-full border border-indigo-300 dark:border-indigo-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 resize-none"
+            rows={3}
+            value={acct.notes}
+            onChange={e => save({ ...acct, notes: e.target.value })}
+            onBlur={() => setEditingNotes(false)}
+          />
+        ) : (
+          <p className="text-sm text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-1 -ml-1" onClick={() => setEditingNotes(true)}>
+            {acct.notes || <span className="text-gray-400 italic">Click to add notes (flights booked, miles redeemed, etc.)…</span>}
+          </p>
+        )}
+      </Card>
+    </div>
+  );
+}
+
 // ── UVC Membership ────────────────────────────────────────────────────────────
 
 const UVC_KEY = 'uvc-membership-v1';
@@ -751,7 +926,7 @@ function UVCSection() {
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function TravelSection() {
-  const [activeTab, setActiveTab] = useState<'trips' | 'uvc'>('trips');
+  const [activeTab, setActiveTab] = useState<'trips' | 'uvc' | 'frontier'>('trips');
   const [trips, setTrips] = useState<Trip[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newDest, setNewDest] = useState('');
@@ -863,7 +1038,7 @@ export default function TravelSection() {
 
       {/* Sub-tabs */}
       <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
-        {([['trips', '🗺️ My Trips'], ['uvc', '🌴 UVC Membership']] as const).map(([id, label]) => (
+        {([['trips', '🗺️ My Trips'], ['frontier', '🟢 Frontier Miles'], ['uvc', '🌴 UVC Membership']] as const).map(([id, label]) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
@@ -879,6 +1054,7 @@ export default function TravelSection() {
       </div>
 
       {activeTab === 'uvc' && <UVCSection />}
+      {activeTab === 'frontier' && <FrontierSection />}
       {activeTab === 'trips' && (<>
 
       {showAddForm && (
